@@ -24,7 +24,6 @@ char board[LINES][COLS];
 
 pthread_t tokens[TOKENS]; /* declaração do vetor de threads (tokens) */
 pthread_mutex_t mutex1; /* declaração do mutex para proteger região crítica */
-pthread_mutex_t mutex2; /* declaração do mutex para proteger região crítica */
 
 typedef struct CoordStruct {
   int x;
@@ -101,17 +100,21 @@ int main(void) {
   
   
   pthread_mutex_init(&mutex1,NULL); /* inicializa mutex*/
-  pthread_mutex_init(&mutex2,NULL); /* inicializa mutex*/
   
   draw_board(); /* inicializa tabuleiro */
   
   /* comando de repetição para ajustar velocidade de movimentação dos tokens de acordo com dificuldade*/
  
-   move_tokens();/* move os tokens aleatoriamente */
+    move_tokens();/* move os tokens aleatoriamente */
  
    do {
+    pthread_mutex_lock(&mutex1);
+    board_refresh();
+    pthread_mutex_unlock(&mutex1);
+    //marcar o tempo
     
     ch = getch();
+    pthread_mutex_lock(&mutex1);
     switch (ch) {
       case KEY_UP:
       case 'w':
@@ -142,11 +145,14 @@ int main(void) {
         }
         break;
     }
+   pthread_mutex_unlock(&mutex1);
+   // criar funcao para verificar posicao do cursor e matar a thread
+    
   }while ((ch != 'q') && (ch != 'Q'));
   endwin();
   exit(0);
  
- 
+  
 }
 
 void move_tokens() {
@@ -161,15 +167,13 @@ void move_tokens() {
 }
 
   /* Aguarda término das threads*/
-  for (i = 0; i < TOKENS; i++)
-      pthread_join(tokens[i],NULL);
+  //for (i = 0; i < TOKENS; i++)
+     // pthread_join(tokens[i],NULL);
   
 }
 
 void board_refresh(void) {
   int x, y, i;
-
-    pthread_mutex_lock(&mutex2);
 
   /* redesenha tabuleiro "limpo" */
 
@@ -194,9 +198,9 @@ void board_refresh(void) {
     refresh();
     attron(COLOR_PAIR(CURSOR_PAIR));
     mvaddch(cursor.y, cursor.x, EMPTY);
-    attroff(COLOR_PAIR(CURSOR_PAIR));  
-    pthread_mutex_unlock(&mutex2);   
-  
+    attroff(COLOR_PAIR(CURSOR_PAIR)); 
+    
+     
 }
 
 void *move_token(void *arg) {
@@ -222,25 +226,24 @@ void *move_token(void *arg) {
     new_x = rand()%(COLS);
     new_y = rand()%(LINES);
   } while((board[new_x][new_y] != 0) || ((new_x == cursor.x) && (new_y == cursor.y)));
- 
-  /* comando sleep para a thread */
-
-  sleep(tempoSleep);
   
   /* retira token da posicao antiga  */ 
-   
   board[coord_tokens[i].x][coord_tokens[i].y] = 0; 
   board[new_x][new_y] = i; 
    
   /* coloca token na nova posicao */ 
   coord_tokens[i].x = new_x;
-  coord_tokens[i].y  = new_y;
+  coord_tokens[i].y = new_y;
+  
+  /* redesenha tabuleiro */
+  board_refresh(); 
   
   /* Destravando o mutex para que a próxima thread consiga executar o código */
   pthread_mutex_unlock(&mutex1);
-  
-  board_refresh(); /* redesenha tabuleiro */
    
+  /* comando sleep para a thread */
+  sleep(tempoSleep);
+  
    }
  } 
     
