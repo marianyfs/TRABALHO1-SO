@@ -44,10 +44,22 @@ coord_type cursor, coord_tokens[TOKENS];
 /* Variáveis para controlar a dificuldade do jogo */ 
 int sleep_timming;
 bool request_difficulty = TRUE;
-  
+
+// -- MAIN --------------------------------------------------------------------
 int main(void) {
 
   int cursor_input;
+
+  /* inicializa mutex
+    :board_mutex    Mutex para proteger a região crítica, nesse caso cada
+                    thread precisa executar o código que altera o tabuleiro
+                    de forma exclsiva sem que outra thread interfira
+    :cursor_mutex   Mutex para proteger a região crítica, nesse caso cada
+                    thread precisa executar o código que altera o cursor
+                    de forma exclsiva sem que outra thread interfira
+  */
+  pthread_mutex_init(&board_mutex, NULL);
+  pthread_mutex_init(&cursor_mutex, NULL);
 
   /* inicializa gerador de numeros aleatorios */ 
   srand(time(NULL));
@@ -74,17 +86,6 @@ int main(void) {
   init_pair(EMPTY_PAIR, COLOR_BLUE, COLOR_BLUE);
   clear();
   
-  /* inicializa mutex
-    :board_mutex    Mutex para proteger a região crítica, nesse caso cada
-                    thread precisa executar o código que altera o tabuleiro
-                    de forma exclsiva sem que outra thread interfira
-    :cursor_mutex   Mutex para proteger a região crítica, nesse caso cada
-                    thread precisa executar o código que altera o cursor
-                    de forma exclsiva sem que outra thread interfira
-  */
-  pthread_mutex_init(&board_mutex, NULL);
-  pthread_mutex_init(&cursor_mutex, NULL);
-  
   /* inicializa tabuleiro */
   draw_board();
   
@@ -96,10 +97,11 @@ int main(void) {
   /* move os tokens aleatoriamente */
   move_tokens();
  
-  do {
-    pthread_mutex_lock(&board_mutex);
+  do { 
+    /* TODO:
+      Função para verificar se algum token deve ser removido
+    */
     board_refresh();
-    pthread_mutex_unlock(&board_mutex);
     
     cursor_input = getch();
     apply_player_cursor_change(cursor_input);
@@ -108,6 +110,8 @@ int main(void) {
   endwin();
   exit(0);
 }
+
+// -- END MAIN ----------------------------------------------------------------
 
 void move_tokens() {
   int i;
@@ -118,13 +122,14 @@ void move_tokens() {
     ids[i] = malloc(sizeof(int));
     *ids[i] = i;
 
-    pthread_create(&tokens[i],NULL,move_token,(void *)ids[i]);
+    pthread_create(&tokens[i], NULL, move_token, (void *)ids[i]);
   }
 }
 
 void board_refresh(void) {
   int x, y, i;
 
+  pthread_mutex_lock(&board_mutex);
   /* redesenha tabuleiro "limpo" */
   for (x = 0; x < COLS; x++) 
     for (y = 0; y < LINES; y++){
@@ -132,6 +137,7 @@ void board_refresh(void) {
       mvaddch(y, x, EMPTY);
       attroff(COLOR_PAIR(EMPTY_PAIR));
   }
+  pthread_mutex_unlock(&board_mutex);
 
   /* poe os tokens no tabuleiro */
   for (i = 0; i < TOKENS; i++) {
@@ -140,12 +146,14 @@ void board_refresh(void) {
     attroff(COLOR_PAIR(TOKEN_PAIR));
   }
   
+  pthread_mutex_lock(&cursor_mutex);
   //poe o cursor no tabuleiro 
-    move(y, x);
-    refresh();
-    attron(COLOR_PAIR(CURSOR_PAIR));
-    mvaddch(cursor.y, cursor.x, EMPTY);
-    attroff(COLOR_PAIR(CURSOR_PAIR)); 
+  move(y, x);
+  refresh();
+  attron(COLOR_PAIR(CURSOR_PAIR));
+  mvaddch(cursor.y, cursor.x, EMPTY);
+  attroff(COLOR_PAIR(CURSOR_PAIR));
+  pthread_mutex_unlock(&cursor_mutex);
 }
 
 void *move_token(void *arg) {
@@ -166,22 +174,24 @@ void *move_token(void *arg) {
   start_time = time(NULL);
 
   // Infinit running
-  for(;;) {
+  do {
     current_time = time(NULL);
     if (current_time - start_time >= 1){
       start_time = current_time;
    
       pthread_mutex_lock(&board_mutex);
-   
-      /* determina novas posicoes (coordenadas) do token no tabuleiro (matriz) */
+
+      pthread_mutex_lock(&cursor_mutex);
       do {
         new_x = rand()%(COLS);
         new_y = rand()%(LINES);
       } while ((board[new_x][new_y] != 0) || ((new_x == cursor.x) && (new_y == cursor.y)));
+      pthread_mutex_unlock(&cursor_mutex);
   
       /* retira token da posicao antiga  */ 
       board[coord_tokens[i].x][coord_tokens[i].y] = 0; 
-      board[new_x][new_y] = i; 
+      board[new_x][new_y] = i;
+      pthread_mutex_unlock(&board_mutex);
    
       /* coloca token na nova posicao */ 
       coord_tokens[i].x = new_x;
@@ -189,27 +199,28 @@ void *move_token(void *arg) {
   
       /* redesenha tabuleiro */
       board_refresh(); 
-  
-      /* Destravando o mutex para que a próxima thread consiga executar o código */
-      pthread_mutex_unlock(&board_mutex);
    
       /* comando sleep para a thread */
       sleep(sleep_timming);
     }
-  } 
+  } while (TRUE);
 }
 
 void draw_board(void) {
   int x, y;
 
   /* limpa matriz que representa o tabuleiro */
-  for (x = 0; x < COLS; x++) 
-    for (y = 0; y < LINES; y++) 
+  for (x = 0; x < COLS; x++) {
+    for (y = 0; y < LINES; y++) {
+      pthread_mutex_lock(&board_mutex);
       board[x][y] = 0;
+      pthread_mutex_unlock(&board_mutex);
+    }
+  }
 }
 
 void apply_player_cursor_change(int cursor_input) {
-  pthread_mutex_lock(&board_mutex);
+  pthread_mutex_lock(&cursor_mutex);
   switch (cursor_input) {
     case KEY_UP:
     case 'w':
@@ -240,7 +251,7 @@ void apply_player_cursor_change(int cursor_input) {
       }
       break;
   }
-  pthread_mutex_unlock(&board_mutex);
+  pthread_mutex_unlock(&cursor_mutex);
 }
 
 void input_difficulty() {
