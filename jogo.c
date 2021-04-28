@@ -42,8 +42,7 @@ typedef struct CoordStruct {
 coord_type cursor, coord_tokens[TOKENS];
 
 /* Variáveis para controlar a dificuldade do jogo */ 
-int sleep_timming;
-bool request_difficulty = TRUE;
+int sleep_timing;
 
 // -- MAIN --------------------------------------------------------------------
 int main(void) {
@@ -88,24 +87,18 @@ int main(void) {
   
   /* inicializa tabuleiro */
   draw_board();
-  
-  /* TODO:
-    comando de repetição para ajustar velocidade de movimentação dos tokens de
-    acordo com dificuldade
-  */
  
   /* move os tokens aleatoriamente */
   move_tokens();
  
   do { 
-    /* TODO:
-      Função para verificar se algum token deve ser removido
-    */
     board_refresh();
     
     cursor_input = getch();
     apply_player_cursor_change(cursor_input);
-    
+    /* TODO:
+      Adicionar função para verificar se algum token deve ser removido
+    */
   } while ((cursor_input != 'q') && (cursor_input != 'Q'));
   endwin();
   exit(0);
@@ -200,8 +193,13 @@ void *move_token(void *arg) {
       /* redesenha tabuleiro */
       board_refresh(); 
    
-      /* comando sleep para a thread */
-      sleep(sleep_timming);
+      /* TODO:
+        Ajustar velocidade de movimentação dos tokens de acordo com dificuldade
+        mudando o sleep_timing
+
+        comando sleep para a thread
+      */
+      sleep(sleep_timing);
     }
   } while (TRUE);
 }
@@ -262,16 +260,13 @@ void input_difficulty() {
 
   switch(choice) {
     case 1:
-      sleep_timming = 1;
-      request_difficulty = FALSE;
+      sleep_timing = 1;
     break;
     case 2:
-      sleep_timming = 0.5;
-      request_difficulty = FALSE;
+      sleep_timing = 0.5;
     break;
     case 3:
-      sleep_timming = 0.2;
-      request_difficulty = FALSE;
+      sleep_timing = 0.2;
     break;
     default:
       printf("Opção inválida. Escolha novamente!\n\n");
