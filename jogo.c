@@ -122,15 +122,15 @@ void move_tokens() {
 void board_refresh(void) {
   int x, y, i;
 
-  pthread_mutex_lock(&board_mutex);
-  /* redesenha tabuleiro "limpo" */
-  for (x = 0; x < COLS; x++) 
-    for (y = 0; y < LINES; y++){
-      attron(COLOR_PAIR(EMPTY_PAIR));
-      mvaddch(y, x, EMPTY);
-      attroff(COLOR_PAIR(EMPTY_PAIR));
-  }
-  pthread_mutex_unlock(&board_mutex);
+  pthread_mutex_lock(&board_mutex); // ----------------------------------------
+  /* redesenha tabuleiro "limpo" */                                        // -
+  for (x = 0; x < COLS; x++)                                               // -
+    for (y = 0; y < LINES; y++){                                           // -
+      attron(COLOR_PAIR(EMPTY_PAIR));                                      // -
+      mvaddch(y, x, EMPTY);                                                // -
+      attroff(COLOR_PAIR(EMPTY_PAIR));                                     // -
+  }                                                                        // -
+  pthread_mutex_unlock(&board_mutex); // --------------------------------------
 
   /* poe os tokens no tabuleiro */
   for (i = 0; i < TOKENS; i++) {
@@ -139,14 +139,14 @@ void board_refresh(void) {
     attroff(COLOR_PAIR(TOKEN_PAIR));
   }
   
-  pthread_mutex_lock(&cursor_mutex);
-  //poe o cursor no tabuleiro 
-  move(y, x);
-  refresh();
-  attron(COLOR_PAIR(CURSOR_PAIR));
-  mvaddch(cursor.y, cursor.x, EMPTY);
-  attroff(COLOR_PAIR(CURSOR_PAIR));
-  pthread_mutex_unlock(&cursor_mutex);
+  pthread_mutex_lock(&cursor_mutex); // ---------------------------------------
+  //poe o cursor no tabuleiro                                              // -
+  move(y, x);                                                              // -
+  refresh();                                                               // -
+  attron(COLOR_PAIR(CURSOR_PAIR));                                         // -
+  mvaddch(cursor.y, cursor.x, EMPTY);                                      // -
+  attroff(COLOR_PAIR(CURSOR_PAIR));                                        // -
+  pthread_mutex_unlock(&cursor_mutex); // -------------------------------------
 }
 
 void *move_token(void *arg) {
@@ -172,19 +172,22 @@ void *move_token(void *arg) {
     if (current_time - start_time >= 1){
       start_time = current_time;
    
-      pthread_mutex_lock(&board_mutex);
-
-      pthread_mutex_lock(&cursor_mutex);
-      do {
-        new_x = rand()%(COLS);
-        new_y = rand()%(LINES);
-      } while ((board[new_x][new_y] != 0) || ((new_x == cursor.x) && (new_y == cursor.y)));
-      pthread_mutex_unlock(&cursor_mutex);
-  
-      /* retira token da posicao antiga  */ 
-      board[coord_tokens[i].x][coord_tokens[i].y] = 0; 
-      board[new_x][new_y] = i;
-      pthread_mutex_unlock(&board_mutex);
+      pthread_mutex_lock(&board_mutex); // ------------------------------------
+                                                                           // -
+      pthread_mutex_lock(&cursor_mutex); // ----------------------------   // -
+      do {                                                          // -   // -
+        new_x = rand()%(COLS);                                      // -   // -
+        new_y = rand()%(LINES);                                     // -   // -
+      } while (                                                     // -   // -
+        (board[new_x][new_y] != 0)                                  // -   // -
+        || ((new_x == cursor.x) && (new_y == cursor.y))             // -   // -
+      );                                                            // -   // -
+      pthread_mutex_unlock(&cursor_mutex); // --------------------------   // -
+                                                                           // -
+      /* retira token da posicao antiga  */                                // -
+      board[coord_tokens[i].x][coord_tokens[i].y] = 0;                     // -
+      board[new_x][new_y] = i;                                             // -
+      pthread_mutex_unlock(&board_mutex); // ----------------------------------
    
       /* coloca token na nova posicao */ 
       coord_tokens[i].x = new_x;
@@ -210,46 +213,46 @@ void draw_board(void) {
   /* limpa matriz que representa o tabuleiro */
   for (x = 0; x < COLS; x++) {
     for (y = 0; y < LINES; y++) {
-      pthread_mutex_lock(&board_mutex);
-      board[x][y] = 0;
-      pthread_mutex_unlock(&board_mutex);
+      pthread_mutex_lock(&board_mutex); // ------------------------------------
+      board[x][y] = 0;                                                     // -
+      pthread_mutex_unlock(&board_mutex); // ----------------------------------
     }
   }
 }
 
 void apply_player_cursor_change(int cursor_input) {
-  pthread_mutex_lock(&cursor_mutex);
-  switch (cursor_input) {
-    case KEY_UP:
-    case 'w':
-    case 'W':
-      if ((cursor.y > 0)) {
-        cursor.y = cursor.y - 1;
-      }
-      break;
-    case KEY_DOWN:
-    case 's':
-    case 'S':
-      if ((cursor.y < LINES - 1)) {
-        cursor.y = cursor.y + 1;
-      }
-      break;
-    case KEY_LEFT:
-    case 'a':
-    case 'A':
-      if ((cursor.x > 0)) {
-        cursor.x = cursor.x - 1;
-      }
-      break;
-    case KEY_RIGHT:
-    case 'd':
-    case 'D':
-      if ((cursor.x < COLS - 1)) {
-        cursor.x = cursor.x + 1;
-      }
-      break;
-  }
-  pthread_mutex_unlock(&cursor_mutex);
+  pthread_mutex_lock(&cursor_mutex);  // --------------------------------------
+  switch (cursor_input) {                                                  // -
+    case KEY_UP:                                                           // -
+    case 'w':                                                              // -
+    case 'W':                                                              // -
+      if ((cursor.y > 0)) {                                                // -
+        cursor.y = cursor.y - 1;                                           // -
+      }                                                                    // -
+      break;                                                               // -
+    case KEY_DOWN:                                                         // -
+    case 's':                                                              // -
+    case 'S':                                                              // -
+      if ((cursor.y < LINES - 1)) {                                        // -
+        cursor.y = cursor.y + 1;                                           // -
+      }                                                                    // -
+      break;                                                               // -
+    case KEY_LEFT:                                                         // -
+    case 'a':                                                              // -
+    case 'A':                                                              // -
+      if ((cursor.x > 0)) {                                                // -
+        cursor.x = cursor.x - 1;                                           // -
+      }                                                                    // -
+      break;                                                               // -
+    case KEY_RIGHT:                                                        // -
+    case 'd':                                                              // -
+    case 'D':                                                              // -
+      if ((cursor.x < COLS - 1)) {                                         // -
+        cursor.x = cursor.x + 1;                                           // -
+      }                                                                    // -
+      break;                                                               // -
+  }                                                                        // -
+  pthread_mutex_unlock(&cursor_mutex); // -------------------------------------
 }
 
 void input_difficulty() {
