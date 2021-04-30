@@ -25,6 +25,7 @@ void input_difficulty();
 void apply_player_cursor_change(int cursor_input);
 void check_tokens();
 void remove_token(int position_to_remove);
+void print_winner() ;
 
 char board[LINES][COLS];
 
@@ -50,7 +51,7 @@ int sleep_timing;
 
 // -- MAIN --------------------------------------------------------------------
 int main(void) {
-
+  bool winner = FALSE;
   int cursor_input;
 
   /* inicializa mutex
@@ -104,8 +105,17 @@ int main(void) {
       Adicionar função para verificar se algum token deve ser removido
     */
     check_tokens();
-  } while ((cursor_input != 'q') && (cursor_input != 'Q'));
+
+    if (current_tokens == 0) {
+      winner = TRUE;
+    }
+  } while ((cursor_input != 'q') && (cursor_input != 'Q') && winner == FALSE);
   endwin();
+
+  if (winner){
+    print_winner();
+  }
+
   exit(0);
 }
 
@@ -303,4 +313,15 @@ void input_difficulty() {
       input_difficulty();
     break;
   }
+}
+
+void print_winner() {
+  printf("\n---||||||||||||||||---\n");
+  printf("----|||||VOCE|||||----\n");
+  printf("-----|||VENCEU|||-----\n");
+  printf("-------||||||||-------\n");
+  printf("---------||||---------\n");
+  printf("---------||||---------\n");
+  printf("---------||||---------\n");
+  printf("-------||||||||-------\n");
 }
