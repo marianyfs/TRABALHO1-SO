@@ -23,8 +23,12 @@ void board_refresh(void);
 
 void input_difficulty();
 void apply_player_cursor_change(int cursor_input);
+void check_tokens();
+void remove_token(int position_to_remove);
 
 char board[LINES][COLS];
+
+int current_tokens = TOKENS;
 
 /* declaração do vetor de threads (tokens) */
 pthread_t tokens[TOKENS];
@@ -99,6 +103,7 @@ int main(void) {
     /* TODO:
       Adicionar função para verificar se algum token deve ser removido
     */
+    check_tokens();
   } while ((cursor_input != 'q') && (cursor_input != 'Q'));
   endwin();
   exit(0);
@@ -108,10 +113,10 @@ int main(void) {
 
 void move_tokens() {
   int i;
-  int *ids[TOKENS];
+  int *ids[current_tokens];
   
   /* Cria as threads e passa função para cada thread movimentar seu token no tabuleiro*/
-  for (i = 0; i < TOKENS; i++) {
+  for (i = 0; i < current_tokens; i++) {
     ids[i] = malloc(sizeof(int));
     *ids[i] = i;
 
@@ -133,7 +138,7 @@ void board_refresh(void) {
   pthread_mutex_unlock(&board_mutex); // --------------------------------------
 
   /* poe os tokens no tabuleiro */
-  for (i = 0; i < TOKENS; i++) {
+  for (i = 0; i < current_tokens; i++) {
     attron(COLOR_PAIR(TOKEN_PAIR));
     mvaddch(coord_tokens[i].y, coord_tokens[i].x, EMPTY);
     attroff(COLOR_PAIR(TOKEN_PAIR));
@@ -253,6 +258,28 @@ void apply_player_cursor_change(int cursor_input) {
       break;                                                               // -
   }                                                                        // -
   pthread_mutex_unlock(&cursor_mutex); // -------------------------------------
+}
+
+void check_tokens() {
+  int token_position;
+  pthread_mutex_lock(&cursor_mutex); // ---------------------------------------
+  for (token_position = 0; token_position < current_tokens; token_position++) {
+    if (                                                                   // -
+      coord_tokens[token_position].y == cursor.y                           // -
+      && coord_tokens[token_position].x == cursor.x                        // -
+    ) {                                                                    // -
+      remove_token(token_position);                                        // -
+    }                                                                      // -
+  }                                                                        // -
+  pthread_mutex_unlock(&cursor_mutex); // -------------------------------------
+}
+
+void remove_token(int position_to_remove){
+  int position;
+  for (position = position_to_remove - 1; position < current_tokens - 1; position++){
+    coord_tokens[position_to_remove] = coord_tokens[position + 1];
+  }
+  current_tokens = current_tokens - 1;
 }
 
 void input_difficulty() {
