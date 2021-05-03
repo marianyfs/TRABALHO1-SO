@@ -25,7 +25,9 @@ void input_difficulty();
 void apply_player_cursor_change(int cursor_input);
 void check_tokens();
 void remove_token(int position_to_remove);
-void print_winner() ;
+void print_winner();
+void print_loser();
+void *game_time(void *arg);
 
 char board[LINES][COLS];
 
@@ -33,6 +35,9 @@ int current_tokens = TOKENS;
 
 /* declaração do vetor de threads (tokens) */
 pthread_t tokens[TOKENS];
+
+/* declaração da thread que irá controlar o tempo do jogo */
+pthread_t thread_timer;
 
 /* declaração do mutex para proteger a região crítica do borad */
 pthread_mutex_t board_mutex;
@@ -48,10 +53,13 @@ coord_type cursor, coord_tokens[TOKENS];
 
 /* Variáveis para controlar a dificuldade do jogo */ 
 int sleep_timing;
+int game_timing;
+bool loser = FALSE;
 
 // -- MAIN --------------------------------------------------------------------
 int main(void) {
   bool winner = FALSE;
+  
   int cursor_input;
 
   /* inicializa mutex
@@ -92,6 +100,10 @@ int main(void) {
   
   /* inicializa tabuleiro */
   draw_board();
+  
+  /* criação da thread que irá controlar o tempo do jogo */
+  pthread_create(&thread_timer, NULL, game_time, NULL);
+ 
  
   /* move os tokens aleatoriamente */
   move_tokens();
@@ -101,25 +113,32 @@ int main(void) {
     
     cursor_input = getch();
     apply_player_cursor_change(cursor_input);
-    /* TODO:
-      Adicionar função para verificar se algum token deve ser removido
-    */
+
     check_tokens();
 
     if (current_tokens == 0) {
       winner = TRUE;
     }
-  } while ((cursor_input != 'q') && (cursor_input != 'Q') && winner == FALSE);
+  } while ((cursor_input != 'q') && (cursor_input != 'Q') && winner == FALSE && loser == FALSE);
   endwin();
 
   if (winner){
     print_winner();
+  } else if (loser) {
+    print_loser();
   }
 
   exit(0);
 }
 
 // -- END MAIN ----------------------------------------------------------------
+
+/* função que controla tempo do jogo  */
+void *game_time(void *arg) {
+ sleep(game_timing);
+ loser = TRUE;
+ return 0;
+}
 
 void move_tokens() {
   int i;
@@ -175,10 +194,6 @@ void *move_token(void *arg) {
   id = (int *)arg;
   i = *id;
   
-  /* TODO:
-    Mudar o start_time pra ser atribuido no início na main thread pra ir
-    decrescendo e chegar no tempo limite, pro jogardor perder o jogo
-  */
   start_time = time(NULL);
 
   // Infinit running
@@ -210,13 +225,7 @@ void *move_token(void *arg) {
   
       /* redesenha tabuleiro */
       board_refresh(); 
-   
-      /* TODO:
-        Ajustar velocidade de movimentação dos tokens de acordo com dificuldade
-        mudando o sleep_timing
 
-        comando sleep para a thread
-      */
       sleep(sleep_timing);
     }
   } while (TRUE);
@@ -301,12 +310,15 @@ void input_difficulty() {
   switch(choice) {
     case 1:
       sleep_timing = 1;
+      game_timing = 35;
     break;
     case 2:
       sleep_timing = 0.5;
+      game_timing = 25;
     break;
     case 3:
       sleep_timing = 0.2;
+      game_timing = 15;
     break;
     default:
       printf("Opção inválida. Escolha novamente!\n\n");
@@ -324,4 +336,14 @@ void print_winner() {
   printf("---------||||---------\n");
   printf("---------||||---------\n");
   printf("-------||||||||-------\n");
+}
+
+void print_loser() {
+  printf("\n-----|||||||||||||||||||||||||||||||-----\n");
+  printf("-----||||O TEMPO DO JOGO ACABOU.||||-----\n");
+  printf("-----||||VOCE PERDEU||||||||||||||||-----\n");
+  printf("-----|||||||||||||||||||||||||||||||-----\n");
+  printf("-----|||||||||||||||||||||||||||||||-----\n");
+  printf("-----|||||||||||||||||||||||||||||||-----\n");
+
 }
